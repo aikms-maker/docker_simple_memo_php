@@ -1,3 +1,41 @@
+<?php
+  require '../common/auth.php';
+  require '../common/database.php';
+
+  if(!isLogin()){
+    header('Location: ../login/');
+    exit;
+  }
+
+  $user_name = getLoginUserName();
+  $user_id = getLoginUserId();
+
+  $memos = [];
+  $database_handler = getDatabaseConnection();
+  $sql = 'select id, title, content, updated_at from memos where user_id = :user_id order by updated_at desc';
+  if($statement = $database_handler->prepare($sql)){
+    $statement->bindParam(':user_id', $user_id);
+    $statement->execute();
+
+    while($result = $statement->fetch(PDO::FETCH_ASSOC)){
+      array_push($memos, $result);
+    }
+  }
+
+  $edit_id = "";
+  if(isset($_SESSION['select_memo'])){
+    $edit_memo = $_SESSION['select_memo'];
+    $edit_id = empty ($edit_memo['id']) ? "" : $edit_memo['id'];
+    $edit_title = empty ($edit_memo['title']) ? "" : $edit_memo['title'];
+    $edit_content = empty ($edit_memo['content']) ? "" : $edit_memo['content'];
+  }
+
+  // ---debug code---
+  // echo "<pre><code>";
+  // var_dump($memos, $edit_id, $edit_title, $edit_content);
+  // echo "</code></pre>";
+  // exit;
+?>
 <!DOCTYPE html>
 <html lang="ja">
   <?php
@@ -10,50 +48,57 @@
       <div class="col-3 h-100 m-0 p-0 border-left border-right border-gray">
         <div class="left-memo-menu d-flex justfy-content-between pt-2">
           <div class="pl-3 pt-2">
-            xxxさん、こんにちは。
+            <?php echo $user_name; ?>さん、こんにちは。
           </div>
           <div class="pr-1">
-            <a href="" class="btn btn-success"><i class="fas fa-plus"></i></a>
-            <a href="../login/" class="btn btn-dark"><i class="fas fa-sign-out-alt"></i></a>
+            <a href="./action/add.php" class="btn btn-success"><i class="fas fa-plus"></i></a>
+            <a href="./action/logout.php" class="btn btn-dark"><i class="fas fa-sign-out-alt"></i></a>
           </div>
         </div>
         <div class="left-memo-title h3 pl-3 pt-3">
           メモリスト
         </div>
         <div class="left-memo-list list-group-flush p-0">
-          <a href="#" class="list-group-item list-group-item-action">
-            <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">メモタイトル</h5>
-              <small>2021/01/20 01:30</small>
+          <?php if(empty($memos)): ?>
+            <div class="pl-3 pt-3h5 text-info text-center">
+              <i class="far fa-surprise"></i>メモがありません。
             </div>
-            <p class="mb-1">メモ詳細1</p>
-          </a>
-          <a href="#" class="list-group-item list-group-item-action">
-            <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">メモタイトル2</h5>
-              <small>2021/01/20 01:30</small>
-            </div>
-            <p class="mb-1">メモ詳細2</p>
-          </a>
-          <a href="#" class="list-group-item list-group-item-action">
-            <div class="d-flex w-100 justify-content-between">
-              <h5 class="mb-1">メモタイトル3</h5>
-              <small>2021/01/20 01:30</small>
-            </div>
-            <p class="mb-1">メモ詳細3</p>
-          </a>
+          <?php endif; ?>
+          <?php foreach($memos as $memo) : ?>
+            <a href="./action/select.php?id=<?php echo $memo['id']; ?>" class="list-group-item list-group-item-action <?php echo $edit_id == $memo['id'] ? 'active' : ''; ?>">
+              <div class="d-flex w-100 justify-content-between">
+                <h5 class="mb-1"><?php echo $memo["title"] ?></h5>
+                <small><?php echo date('Y/m/d H:i', strtotime($memo['updated_at'])); ?></small>
+              </div>
+              <p class="mb-1">
+                <?php
+                  if(mb_strlen($memo['content']) <= 100){
+                    echo $memo['content'];
+                  }else{
+                    echo mb_substr($memo['content'], 0, 100)."...";
+                  }
+                ?>
+              </p>
+            </a>
+          <?php endforeach; ?>
         </div>
       </div>
       <div class="col-9 h-100">
-        <form class="w-100 h-100" method="POST">
-          <input type="hidden" name="edit_id" value="" />
-          <div id="memo-menu">
-            <button type="submit" class="btn btn-danger" formaction=""><i class="fas fa-trash-alt"></i></button>
-            <button type="submit" class="btn btn-success" formaction=""><i class="fas fa-save"></i></button>
+        <?php if(isset($_SESSION['select_memo'])): ?>
+          <form class="w-100 h-100" method="POST">
+            <input type="hidden" name="edit_id" value="<?php echo $edit_id; ?>" />
+            <div id="memo-menu">
+              <button type="submit" class="btn btn-danger" formaction="./action/delete.php"><i class="fas fa-trash-alt"></i></button>
+              <button type="submit" class="btn btn-success" formaction="./action/update.php"><i class="fas fa-save"></i></button>
+            </div>
+            <input type="text" name="edit_title" id="memo-title" placeholder="タイトルを入力する..." value="<?php echo $edit_title; ?>" />
+            <textarea name="edit_content" id="memo-content" placeholder="内容を入力する..."><?php echo $edit_content; ?></textarea>
+          </form>
+        <?php else : ?>
+          <div class="mt-3 alert alert-info">
+            <i class="fas fa-info-circle"></i>メモを新規作成するか選択してください。
           </div>
-          <input type="text" name="edit_title" id="memo-title" placeholder="タイトルを入力する..." value="" />
-          <textarea name="edit_content" id="memo-content" placeholder="内容を入力する..."></textarea>
-        </form>
+        <?php endif; ?>
       </div>
     </div>
   </div>

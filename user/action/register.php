@@ -41,10 +41,11 @@
     exit;
   }
 
-  // connect DB
-  $database_handler = getDatabaseConnection();
 
   try{
+    // connect DB
+    $database_handler = getDatabaseConnection();
+
     if($statement = $database_handler->
     prepare('insert into users (name, email, password) values (:name, :email, :password)')){
       $password = password_hash($user_password, PASSWORD_DEFAULT);
@@ -53,6 +54,11 @@
       $statement->bindParam(':email', $user_email);
       $statement->bindParam(':password', $password);
       $statement->execute();
+
+      $_SESSION['user'] = [
+        'name' => $user_name,
+        'id' => $database_handler->lastInsertId()
+      ];
     }
   }catch (Throwable $e){
     echo $e->getMessage();
