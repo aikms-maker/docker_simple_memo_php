@@ -10,4 +10,6 @@ mysql 5.7
 nginx 1.19.1, 
 docker 19, 
 docker-compose 1.27, 
-phpmyadmin 5.0
+phpmyadmin 5.0, 
+Visual Studio Code
+※windows 10 HOMEで開発
